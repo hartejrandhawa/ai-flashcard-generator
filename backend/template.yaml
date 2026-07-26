@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AI Flashcard Generator - serverless backend
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        DECKS_TABLE: !Ref DecksTable
+        CARDS_TABLE: !Ref CardsTable
+        ANTHROPIC_API_KEY: !Ref AnthropicApiKey
+
+Parameters:
+  AnthropicApiKey:
+    Type: String
+    NoEcho: true
+    Description: Your Anthropic API key (get one at console.anthropic.com)
+
+Resources:
+  DecksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: deck_id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: deck_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: user_id-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  CardsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: card_id
+          AttributeType: S
+        - AttributeName: deck_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: card_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: deck_id-index
+          KeySchema:
+            - AttributeName: deck_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  NotesBucket:
+    Type: AWS::S3::Bucket
+
+  GenerateFlashcardsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/
+      Handler: generate_flashcards.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DecksTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CardsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /decks
+            Method: post
+
+  ListDecksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/
+      Handler: list_decks.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DecksTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /decks
+            Method: get
+
+  GetDueCardsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/
+      Handler: get_due_cards.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref CardsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /decks/{deck_id}/due
+            Method: get
+
+  SubmitReviewFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/
+      Handler: submit_review.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CardsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /reviews
+            Method: post
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  NotesBucketName:
+    Value: !Ref NotesBucket

@@ -1,0 +1,49 @@
+.page { max-width: 700px; margin: 0 auto; padding: 40px 24px 80px; }
+.page-header { margin-bottom: 24px; }
+.page-header h1 { margin: 0; font-size: 26px; }
+.back-link { display: inline-block; margin-bottom: 16px; font-size: 13px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; margin-bottom: 20px; }
+.card h2 { margin: 0 0 14px; font-size: 15px; }
+
+.create-form { display: flex; flex-direction: column; gap: 10px; }
+.create-form input, .create-form textarea {
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; width: 100%; resize: vertical;
+}
+.create-form button {
+  padding: 10px 16px; border: none; border-radius: 8px; background: var(--accent); color: white; font-weight: 600; font-size: 14px; align-self: flex-start;
+}
+.create-form button:hover { background: var(--accent-dark); }
+.create-form button:disabled { opacity: 0.5; cursor: default; }
+
+.upload-zone {
+  display: flex; align-items: center; justify-content: center; height: 70px;
+  border: 1.5px dashed var(--border); border-radius: 8px; background: #f3f0fc; cursor: pointer; font-size: 13px;
+}
+.upload-hint { color: var(--text-muted); }
+.file-name { font-weight: 600; color: var(--accent); }
+
+.error-text { color: var(--danger); font-size: 13px; }
+.empty-state { color: var(--text-muted); font-size: 14px; }
+
+.deck-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.deck-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; color: var(--text); }
+.deck-card:hover { border-color: var(--accent); }
+.deck-card h3 { margin: 0 0 4px; font-size: 15px; }
+.deck-card p { margin: 0; font-size: 12px; color: var(--text-muted); }
+
+.quiz-progress { color: var(--text-muted); font-size: 13px; margin: 0 0 12px; }
+.flashcard {
+  background: #f3f0fc; border-radius: 12px; padding: 40px 24px; text-align: center; cursor: pointer; min-height: 120px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+}
+.flashcard-label { text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; color: var(--accent); font-weight: 700; margin: 0; }
+.flashcard-text { font-size: 18px; margin: 0; }
+.flip-hint { font-size: 12px; color: var(--text-muted); margin: 8px 0 0; }
+
+.rating-row { display: flex; gap: 8px; margin-top: 16px; }
+.rating-row button {
+  flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 13px; font-weight: 600;
+}
+.rating-row button:hover { background: #f3f0fc; border-color: var(--accent); }
+.quiz-done { text-align: center; }
