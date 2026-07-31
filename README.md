@@ -19,17 +19,28 @@ deployed and running on AWS, only claimed via an internship.
 This was built in a sandbox with no AWS access and no Anthropic API key,
 so testing split into two categories:
 
-**Fully tested (using `moto` to mock AWS locally):**
+**Fully tested (25 pytest tests, using `moto` to mock AWS locally):**
 - SM-2 algorithm — verified interval growth (1 → 6 → 15 → 38 → 95 → 238
-  days with consistent good recall) and correct reset to 1 day on a
-  forgotten card
+  days with consistent good recall), correct reset to 1 day on a
+  forgotten card, and the easiness-factor floor at 1.3
 - Deck/card creation, due-card queries, and review submission — full
-  DynamoDB read/write flow tested end-to-end
+  DynamoDB read/write flow tested end-to-end, including all four Lambda
+  handlers with API-Gateway-shaped events
 - Input validation (rejects invalid quality scores, missing fields)
-- One real bug caught and fixed during testing: DynamoDB's boto3 API
-  rejects native Python floats — the easiness factor field needed
-  converting to `Decimal`, which would have crashed on the very first
-  write in a real deployment
+- `generate_flashcards.py`'s handler logic and Claude-response parsing
+  (markdown code-fence stripping), with the Anthropic client mocked
+- Two real bugs caught and fixed during testing:
+  - DynamoDB's boto3 API rejects native Python floats — the easiness
+    factor field needed converting to `Decimal`, which would have
+    crashed on the very first write in a real deployment
+  - `list_decks.py` and `get_due_cards.py` read `queryStringParameters`
+    / `pathParameters` with `event.get(key, {})` — but real API Gateway
+    proxy events set these to `null`, not omit them, when empty. `.get()`
+    on `None` threw an `AttributeError`, which the handler's broad
+    exception handler turned into a misleading 500 instead of the
+    intended 400.
+
+Run them yourself: `cd backend && pip install -r requirements-dev.txt && pytest`
 
 **Not testable here, needs your own setup:**
 - The actual Claude API call in `generate_flashcards.py` — needs your own

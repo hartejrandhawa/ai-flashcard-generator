@@ -12,6 +12,11 @@ Globals:
         DECKS_TABLE: !Ref DecksTable
         CARDS_TABLE: !Ref CardsTable
         ANTHROPIC_API_KEY: !Ref AnthropicApiKey
+  Api:
+    Cors:
+      AllowOrigin: "'*'"
+      AllowHeaders: "'Content-Type'"
+      AllowMethods: "'GET,POST,OPTIONS'"
 
 Parameters:
   AnthropicApiKey:

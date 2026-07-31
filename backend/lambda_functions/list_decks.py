@@ -14,7 +14,7 @@ from db import list_decks_for_user
 
 def handler(event, context):
     try:
-        user_id = event.get("queryStringParameters", {}).get("user_id")
+        user_id = (event.get("queryStringParameters") or {}).get("user_id")
         if not user_id:
             return _response(400, {"error": "user_id is required"})
 
@@ -28,6 +28,9 @@ def handler(event, context):
 def _response(status_code, body):
     return {
         "statusCode": status_code,
-        "headers": {"Content-Type": "application/json"},
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+        },
         "body": json.dumps(body),
     }

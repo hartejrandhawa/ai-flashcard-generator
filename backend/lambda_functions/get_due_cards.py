@@ -26,7 +26,7 @@ def _card_to_state(card: dict) -> CardState:
 
 def handler(event, context):
     try:
-        deck_id = event.get("pathParameters", {}).get("deck_id")
+        deck_id = (event.get("pathParameters") or {}).get("deck_id")
         if not deck_id:
             return _response(400, {"error": "deck_id is required"})
 
@@ -48,6 +48,9 @@ def handler(event, context):
 def _response(status_code, body):
     return {
         "statusCode": status_code,
-        "headers": {"Content-Type": "application/json"},
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+        },
         "body": json.dumps(body),
     }
