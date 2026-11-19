@@ -68,10 +68,20 @@ export default function App() {
   if (status === "loading") return <Notice title="Signing you in..." />;
   if (status === "out") {
     return (
-      <Notice title="Welcome">
-        <p className="empty-state">
-          Sign in to create and study your flashcard decks.
-        </p>
+      <Notice title="Turn your notes into flashcards">
+        <ol className="steps">
+          <li>
+            <strong>Upload</strong> a PDF or paste your notes.
+          </li>
+          <li>
+            <strong>Review</strong> the cards Claude writes, and edit any you
+            want to change.
+          </li>
+          <li>
+            <strong>Study</strong> with spaced repetition: each card comes back
+            just before you'd forget it.
+          </li>
+        </ol>
         {error && <p className="error-text">{error}</p>}
         <button type="button" className="btn btn-primary" onClick={login}>
           Sign in or create an account

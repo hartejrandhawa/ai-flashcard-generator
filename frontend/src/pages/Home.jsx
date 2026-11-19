@@ -68,6 +68,7 @@ export default function Home() {
   const [notesText, setNotesText] = useState("");
   const [fileName, setFileName] = useState(null);
   const [reading, setReading] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -107,10 +108,20 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [anyGenerating, loadDecks]);
 
-  async function handleFileChange(e) {
+  function handleFileChange(e) {
     const file = e.target.files[0];
     e.target.value = ""; // lets the same file be picked again later
-    if (!file) return;
+    if (file) readFile(file);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) readFile(file);
+  }
+
+  async function readFile(file) {
     setError(null);
 
     const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
@@ -192,7 +203,15 @@ export default function Home() {
           required
         />
 
-        <label className="upload-zone">
+        <label
+          className={`upload-zone${dragging ? " is-dragging" : ""}`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+        >
           <input
             type="file"
             accept=".pdf,.txt,application/pdf,text/plain"
@@ -204,7 +223,9 @@ export default function Home() {
           ) : fileName ? (
             <span className="file-name">{fileName}</span>
           ) : (
-            <span className="upload-hint">Upload a PDF or .txt file</span>
+            <span className="upload-hint">
+              <strong>Choose a PDF or .txt file</strong> or drop it here
+            </span>
           )}
         </label>
 
@@ -226,9 +247,18 @@ export default function Home() {
             {error}
           </p>
         )}
-        <button type="submit" disabled={!canSubmit}>
-          {submitting ? "Starting..." : "Generate flashcards"}
-        </button>
+        <div className="submit-row">
+          <button type="submit" disabled={!canSubmit}>
+            {submitting ? "Starting..." : "Generate flashcards"}
+          </button>
+          {!canSubmit && !submitting && !reading && !overLimit && (
+            <span className="hint">
+              {!deckName.trim()
+                ? "Add a deck name to continue."
+                : "Add some notes to continue."}
+            </span>
+          )}
+        </div>
       </form>
 
       {notice && (

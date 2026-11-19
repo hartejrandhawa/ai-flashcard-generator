@@ -1,4 +1,6 @@
+/* Every colour is a token here, so dark mode only has to redefine the tokens. */
 :root {
+  color-scheme: light dark;
   --bg: #f7f7fb;
   --surface: #ffffff;
   --border: #e3e3ec;
@@ -6,14 +8,61 @@
   --text-muted: #6b6b7d;
   --accent: #6d28d9;
   --accent-dark: #5b21b6;
+  --accent-soft: #f3f0fc;
+  --accent-soft-strong: #e4dcf8;
+  --muted-fill: #f0f0f5;
   --danger: #b91c1c;
+  --danger-soft: #fdf0f0;
+  --danger-border: #f0c9c9;
+  --success: #15803d;
+  --success-soft: #ecfdf3;
+  --success-border: #b7ebcb;
+  --warn: #d97706;
+  --info: #2563eb;
+  --on-accent: #ffffff; /* text on accent-coloured buttons */
   --sans: -apple-system, "Inter", "Segoe UI", Roboto, sans-serif;
   color: var(--text);
   background: var(--bg);
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
 }
-* { box-sizing: border-box; }
-body { margin: 0; }
-button { font-family: inherit; cursor: pointer; }
-a { color: var(--accent); text-decoration: none; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121218;
+    --surface: #1b1b23;
+    --border: #2e2e3a;
+    --text: #ececf3;
+    --text-muted: #9d9db0;
+    --accent: #a78bfa;
+    --accent-dark: #c4b5fd;
+    --accent-soft: #241f36;
+    --accent-soft-strong: #352c52;
+    --muted-fill: #262630;
+    --danger: #f87171;
+    --danger-soft: #2a1717;
+    --danger-border: #5c2626;
+    --success: #4ade80;
+    --success-soft: #12251a;
+    --success-border: #1f4d31;
+    --warn: #fbbf24;
+    --info: #60a5fa;
+    /* Dark text: white on the lighter dark-mode accent would fail contrast. */
+    --on-accent: #14111f;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
