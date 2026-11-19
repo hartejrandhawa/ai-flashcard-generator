@@ -16,6 +16,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       # Python 3.12 matches the Lambda runtime in template.yaml.
       - run: uv sync --python 3.12
+      - run: uv run ruff check .
       - run: uv run pytest
       # Lints the CloudFormation after the SAM transform is applied.
       - run: uvx cfn-lint template.yaml

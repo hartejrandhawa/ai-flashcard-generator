@@ -10,8 +10,9 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "moto[dynamodb,ssm,lambda]",
+    "moto[dynamodb,ssm]",
     "pytest",
+    "ruff>=0.17.5",
 ]
 
 [tool.pytest.ini_options]
@@ -21,3 +22,11 @@ testpaths = ["tests"]
 # Not a package: the Lambda code in lambda_functions/ is deployed by SAM.
 [tool.uv]
 package = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["lambda_functions", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

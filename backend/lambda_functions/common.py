@@ -13,7 +13,7 @@ import functools
 import json
 import logging
 import os
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -49,7 +49,7 @@ def parse_body(event: dict) -> dict:
     try:
         body = json.loads(raw)
     except (TypeError, ValueError):
-        raise ApiError(400, "Request body must be valid JSON")
+        raise ApiError(400, "Request body must be valid JSON") from None
     if not isinstance(body, dict):
         raise ApiError(400, "Request body must be a JSON object")
     return body
@@ -77,7 +77,7 @@ def path_param(event: dict, name: str) -> str:
 
 
 def utc_today() -> date:
-    return datetime.now(timezone.utc).date()
+    return datetime.now(UTC).date()
 
 
 def parse_today(raw: str | None) -> date:
@@ -91,7 +91,7 @@ def parse_today(raw: str | None) -> date:
     try:
         value = date.fromisoformat(raw)
     except (TypeError, ValueError):
-        raise ApiError(400, "today must be a date formatted YYYY-MM-DD")
+        raise ApiError(400, "today must be a date formatted YYYY-MM-DD") from None
     if abs(value - utc_today()) > timedelta(days=1):
         raise ApiError(400, "today is out of range")
     return value

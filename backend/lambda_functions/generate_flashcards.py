@@ -70,7 +70,7 @@ def handler(event, context):
         # Don't leave a deck stuck on "generating" that nothing will ever finish.
         logger.exception("Could not start generation worker")
         delete_deck(deck_id)
-        raise ApiError(502, "Could not start generation. Please try again.")
+        raise ApiError(502, "Could not start generation. Please try again.") from None
 
     return response(
         202,

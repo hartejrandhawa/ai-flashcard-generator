@@ -148,7 +148,7 @@ def generate_cards(notes_text: str, client=None) -> list[dict]:
         logger.exception("Anthropic API call failed")
         raise GenerationError(
             "The AI service is unavailable right now. Please try again in a minute."
-        )
+        ) from None
 
     if response.stop_reason == "refusal":
         raise GenerationError("The AI declined to create flashcards from these notes.")
@@ -171,7 +171,7 @@ def generate_cards(notes_text: str, client=None) -> list[dict]:
         )
         raise GenerationError(
             "The AI returned an unreadable response. Please try again."
-        )
+        ) from None
 
     if not cards:
         raise GenerationError("No flashcards could be generated from these notes.")

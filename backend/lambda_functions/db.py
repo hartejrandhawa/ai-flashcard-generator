@@ -21,7 +21,7 @@ Table: Cards
 import functools
 import os
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import boto3
@@ -57,7 +57,7 @@ def _table(name: str):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _query_all(table, **kwargs) -> list[dict]:
@@ -153,7 +153,7 @@ def consume_generation_quota(user_id: str, limit: int, today: str) -> bool:
     counts nothing) when the limit is already reached. The check and the
     increment are one conditional write, so concurrent requests can't overshoot.
     """
-    expires_at = int((datetime.now(timezone.utc) + timedelta(days=2)).timestamp())
+    expires_at = int((datetime.now(UTC) + timedelta(days=2)).timestamp())
     try:
         _table(DECKS_TABLE).update_item(
             Key={"deck_id": f"quota#{user_id}#{today}"},
@@ -274,5 +274,5 @@ def update_card_schedule(
         )
     except ClientError as e:
         if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-            raise ConflictError("Card was modified concurrently")
+            raise ConflictError("Card was modified concurrently") from None
         raise

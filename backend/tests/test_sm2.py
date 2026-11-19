@@ -1,6 +1,7 @@
 from datetime import date
 
 import pytest
+
 from sm2 import CardState, is_due, review_card
 
 

@@ -51,7 +51,7 @@ def handler(event, context):
             expected_next_review=card.get("next_review") or NEW_CARD_DUE,
         )
     except ConflictError:
-        raise ApiError(409, "This card was just reviewed. Please reload.")
+        raise ApiError(409, "This card was just reviewed. Please reload.") from None
 
     return response(
         200,
