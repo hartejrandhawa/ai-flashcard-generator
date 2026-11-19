@@ -182,12 +182,14 @@ Resources:
               Access-Control-Allow-Origin: !Sub "'${AllowedOrigin}'"
       # Stage-wide ceiling that protects the account and the Anthropic bill
       # from floods. The per-user daily quota is enforced in the handler.
+      # ResourcePath escapes "/" inside the path as "~1" (JSON Pointer style),
+      # so /decks is written /~1decks; a plain "/decks" fails the deploy.
       MethodSettings:
         - ResourcePath: /*
           HttpMethod: '*'
           ThrottlingRateLimit: 20
           ThrottlingBurstLimit: 40
-        - ResourcePath: /decks
+        - ResourcePath: /~1decks
           HttpMethod: POST
           ThrottlingRateLimit: 1
           ThrottlingBurstLimit: 3
