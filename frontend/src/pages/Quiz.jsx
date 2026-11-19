@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../api/client";
+import IndexCard from "../components/IndexCard";
 
+// `note` says what the rating means, so first-time users can pick honestly.
 const RATINGS = [
-  { label: "Again", quality: 1, key: "1", tone: "again" },
-  { label: "Hard", quality: 3, key: "2", tone: "hard" },
-  { label: "Good", quality: 4, key: "3", tone: "good" },
-  { label: "Easy", quality: 5, key: "4", tone: "easy" },
+  {
+    label: "Again",
+    note: "Didn't know it",
+    quality: 1,
+    key: "1",
+    tone: "again",
+  },
+  { label: "Hard", note: "Got it, slowly", quality: 3, key: "2", tone: "hard" },
+  { label: "Good", note: "Knew it", quality: 4, key: "3", tone: "good" },
+  { label: "Easy", note: "Instantly", quality: 5, key: "4", tone: "easy" },
 ];
 
 export default function Quiz() {
@@ -128,21 +136,23 @@ export default function Quiz() {
   }
 
   return (
-    <div className="page">
+    <main className="page quiz">
       <Link to="/" className="back-link">
         &larr; All decks
       </Link>
 
       {!current ? (
-        <div className="card centered">
-          <h2>{reviewed > 0 ? "Session complete" : "Nothing due"}</h2>
-          <p className="empty-state">
+        <div className="sheet done">
+          <h1 className="sheet-title">
+            {reviewed > 0 ? "Session complete" : "Nothing due right now"}
+          </h1>
+          <p className="lead">
             {reviewed > 0
               ? `You reviewed ${reviewed} card${reviewed === 1 ? "" : "s"}. `
               : ""}
-            Nothing else is due in this deck. Come back later.
+            The next cards in this deck come due on later days.
           </p>
-          <div className="deck-actions center">
+          <div className="deck-actions">
             <Link to="/" className="btn btn-primary">
               Back to decks
             </Link>
@@ -152,7 +162,7 @@ export default function Quiz() {
           </div>
         </div>
       ) : (
-        <div className="card quiz-card">
+        <>
           <div className="quiz-progress">
             <span>
               Card {index + 1} of {queue.length}
@@ -172,30 +182,13 @@ export default function Quiz() {
             </div>
           </div>
 
-          <button
-            type="button"
-            className={`flashcard${flipped ? " is-flipped" : ""}`}
-            onClick={() => setFlipped((f) => !f)}
-            aria-label={
-              flipped
-                ? "Answer shown. Press to hide it."
-                : "Question. Press to reveal the answer."
-            }
-          >
-            <span className="flashcard-label">Question</span>
-            <span className="flashcard-text">{current.front}</span>
-            {flipped ? (
-              <>
-                <span className="flashcard-divider" aria-hidden="true" />
-                <span className="flashcard-label">Answer</span>
-                <span className="flashcard-text answer">{current.back}</span>
-              </>
-            ) : (
-              <span className="flip-hint">
-                Click or press space to reveal the answer
-              </span>
-            )}
-          </button>
+          <IndexCard
+            front={current.front}
+            back={current.back}
+            revealed={flipped}
+            onToggle={() => setFlipped((f) => !f)}
+            depth={queue.length - index - 1}
+          />
 
           {actionError && (
             <p className="error-text" role="alert">
@@ -203,23 +196,35 @@ export default function Quiz() {
             </p>
           )}
 
-          {flipped && (
-            <div className="rating-row">
+          {flipped ? (
+            <div
+              className="rating-row"
+              role="group"
+              aria-label="How well did you know it?"
+            >
               {RATINGS.map((r) => (
                 <button
                   key={r.quality}
                   type="button"
-                  className={`rate-${r.tone}`}
+                  className={`rate rate-${r.tone}`}
                   onClick={() => rate(r.quality)}
                   disabled={busy}
                 >
-                  {r.label} <span className="key-hint">{r.key}</span>
+                  <span className="rate-label">
+                    {r.label} <kbd>{r.key}</kbd>
+                  </span>
+                  <span className="rate-note">{r.note}</span>
                 </button>
               ))}
             </div>
+          ) : (
+            <p className="hint center quiz-keys">
+              Keys: <kbd>Space</kbd> shows the answer, then <kbd>1</kbd>–
+              <kbd>4</kbd> rate it.
+            </p>
           )}
-        </div>
+        </>
       )}
-    </div>
+    </main>
   );
 }

@@ -1,54 +1,64 @@
-/* Every colour is a token here, so dark mode only has to redefine the tokens. */
+/*
+ * Visual language: paper index cards on a desk. Navy ink for text and primary
+ * actions, ruled-line blue for structure, the index card's red header line as
+ * the accent, and highlighter yellow reserved for "what's due".
+ * Every colour is a token, so dark mode only redefines the tokens.
+ */
 :root {
   color-scheme: light dark;
-  --bg: #f7f7fb;
-  --surface: #ffffff;
-  --border: #e3e3ec;
-  --text: #1a1a24;
-  --text-muted: #6b6b7d;
-  --accent: #6d28d9;
-  --accent-dark: #5b21b6;
-  --accent-soft: #f3f0fc;
-  --accent-soft-strong: #e4dcf8;
-  --muted-fill: #f0f0f5;
-  --danger: #b91c1c;
-  --danger-soft: #fdf0f0;
-  --danger-border: #f0c9c9;
-  --success: #15803d;
-  --success-soft: #ecfdf3;
-  --success-border: #b7ebcb;
-  --warn: #d97706;
-  --info: #2563eb;
-  --on-accent: #ffffff; /* text on accent-coloured buttons */
-  --sans: -apple-system, "Inter", "Segoe UI", Roboto, sans-serif;
-  color: var(--text);
-  background: var(--bg);
+  --desk: #e8ecf1;
+  --paper: #ffffff;
+  --ink: #1f2a44;
+  --ink-hover: #2c3b5e;
+  --muted: #5b6478;
+  --rule: #c9d8ea;
+  --rule-strong: #9db7d5;
+  --margin-red: #c8423a;
+  --highlight: #ffe066;
+  --on-ink: #ffffff;
+  --soft: #f3f6fa;
+  --danger: #b3322a;
+  --danger-soft: #fbeeed;
+  --success: #1f7a4a;
+  --success-soft: #e8f5ee;
+  --warn: #c27a0a;
+  --focus: #2f6fdb;
+  --stack-edge: #dfe5ee;
+
+  /* Charter ships with macOS/iOS; the rest are close matches elsewhere. No web font to load. */
+  --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Ruled-line spacing; answer text sits on these lines. */
+  --line: 32px;
+
+  color: var(--ink);
+  background: var(--desk);
   font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121218;
-    --surface: #1b1b23;
-    --border: #2e2e3a;
-    --text: #ececf3;
-    --text-muted: #9d9db0;
-    --accent: #a78bfa;
-    --accent-dark: #c4b5fd;
-    --accent-soft: #241f36;
-    --accent-soft-strong: #352c52;
-    --muted-fill: #262630;
-    --danger: #f87171;
-    --danger-soft: #2a1717;
-    --danger-border: #5c2626;
-    --success: #4ade80;
-    --success-soft: #12251a;
-    --success-border: #1f4d31;
-    --warn: #fbbf24;
-    --info: #60a5fa;
-    /* Dark text: white on the lighter dark-mode accent would fail contrast. */
-    --on-accent: #14111f;
+    --desk: #11151f;
+    --paper: #1b2130;
+    --ink: #e6eaf2;
+    --ink-hover: #ffffff;
+    --muted: #98a1b5;
+    --rule: #2c3550;
+    --rule-strong: #3d4a6b;
+    --margin-red: #e0675e;
+    --highlight: #8a7420;
+    --on-ink: #11151f;
+    --soft: #222a3c;
+    --danger: #f08a82;
+    --danger-soft: #2e1c1f;
+    --success: #6fcf97;
+    --success-soft: #16281f;
+    --warn: #f0b44c;
+    --focus: #7aa7ff;
+    --stack-edge: #252d40;
   }
 }
 
@@ -57,12 +67,23 @@
 }
 body {
   margin: 0;
+  min-height: 100vh;
+}
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
 }
 button {
-  font-family: inherit;
   cursor: pointer;
 }
 a {
-  color: var(--accent);
-  text-decoration: none;
+  color: var(--ink);
+}
+mark {
+  background: var(--highlight);
+  color: var(--ink);
+  padding: 0 4px;
+  border-radius: 2px;
 }

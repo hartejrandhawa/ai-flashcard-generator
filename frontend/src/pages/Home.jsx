@@ -10,54 +10,64 @@ import { extractPdfText } from "../lib/pdf";
 
 const POLL_MS = 3000;
 
-function DeckCard({ deck, onRemove }) {
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+// Each deck is drawn as a small stack of index cards.
+function DeckTile({ deck, onRemove }) {
   if (deck.status === "generating") {
     return (
-      <div className="deck-card">
+      <article className="deck-tile is-generating">
         <h3>{deck.deck_name}</h3>
         <p className="status-line">
-          <span className="spinner" aria-hidden="true" /> Generating
-          flashcards...
+          <span className="spinner" aria-hidden="true" /> Claude is writing the
+          cards. This takes up to a minute.
         </p>
-      </div>
+      </article>
     );
   }
 
   if (deck.status === "failed") {
     return (
-      <div className="deck-card deck-failed">
+      <article className="deck-tile is-failed">
         <h3>{deck.deck_name}</h3>
         <p className="error-text">{deck.error || "Generation failed."}</p>
-        <button
-          type="button"
-          className="btn btn-quiet"
-          onClick={() => onRemove(deck)}
-        >
-          Remove
-        </button>
-      </div>
+        <div className="deck-actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => onRemove(deck)}
+          >
+            Remove
+          </button>
+        </div>
+      </article>
     );
   }
 
   return (
-    <div className="deck-card">
-      <h3>{deck.deck_name}</h3>
-      <p>
-        {deck.card_count} cards &middot; {deck.due_count} due
+    <article className="deck-tile">
+      <h3>
+        <Link to={`/deck/${deck.deck_id}`}>{deck.deck_name}</Link>
+      </h3>
+      <p className="deck-meta">
+        {plural(deck.card_count, "card")}
+        {deck.due_count > 0 ? (
+          <mark>{deck.due_count} due</mark>
+        ) : (
+          <span>all caught up</span>
+        )}
       </p>
       <div className="deck-actions">
-        {deck.due_count > 0 ? (
+        {deck.due_count > 0 && (
           <Link to={`/quiz/${deck.deck_id}`} className="btn btn-primary">
-            Study {deck.due_count}
+            Study
           </Link>
-        ) : (
-          <span className="btn btn-disabled">Nothing due</span>
         )}
         <Link to={`/deck/${deck.deck_id}`} className="btn btn-secondary">
-          Cards
+          View cards
         </Link>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -191,17 +201,76 @@ export default function Home() {
     notesText.trim() &&
     !overLimit;
 
+  const totalDue = decks?.reduce((sum, d) => sum + (d.due_count || 0), 0) ?? 0;
+
   return (
-    <div className="page">
-      <form className="card create-form" onSubmit={handleCreate}>
-        <h2>New deck</h2>
-        <input
-          placeholder="Deck name (e.g. Biology Chapter 4)"
-          value={deckName}
-          maxLength={MAX_DECK_NAME_CHARS}
-          onChange={(e) => setDeckName(e.target.value)}
-          required
-        />
+    <main className="page home">
+      {notice && (
+        <div className="notice" role="status">
+          <span>
+            <strong>{notice.name}</strong> is ready with{" "}
+            {plural(notice.count, "card")}.
+          </span>
+          <Link to={`/deck/${notice.deckId}`}>Check the cards</Link>
+        </div>
+      )}
+
+      {/* Decks come first: studying is the everyday job, creating is occasional. */}
+      <section className="decks-section" aria-labelledby="decks-heading">
+        <header className="section-head">
+          <h1 id="decks-heading">Your decks</h1>
+          {decks && decks.length > 0 && (
+            <p className="section-sub">
+              {totalDue > 0 ? (
+                <>
+                  <mark>{plural(totalDue, "card")}</mark> due today
+                </>
+              ) : (
+                "Nothing due today. New cards appear as soon as a deck is ready."
+              )}
+            </p>
+          )}
+        </header>
+
+        {loadError && (
+          <p className="error-text" role="alert">
+            {loadError}{" "}
+            <button type="button" className="link-button" onClick={loadDecks}>
+              Retry
+            </button>
+          </p>
+        )}
+        {decks === null ? (
+          !loadError && <p className="empty-state">Loading your decks...</p>
+        ) : decks.length === 0 ? (
+          <div className="empty-deck">
+            <p>No decks yet.</p>
+            <p className="hint">
+              Paste your notes or upload a PDF in New deck to make your first
+              one.
+            </p>
+          </div>
+        ) : (
+          <div className="deck-list">
+            {decks.map((d) => (
+              <DeckTile key={d.deck_id} deck={d} onRemove={handleRemove} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <form className="sheet create-form" onSubmit={handleCreate}>
+        <h2 className="sheet-title">New deck</h2>
+        <label className="field">
+          <span>Deck name</span>
+          <input
+            placeholder="Biology, chapter 4"
+            value={deckName}
+            maxLength={MAX_DECK_NAME_CHARS}
+            onChange={(e) => setDeckName(e.target.value)}
+            required
+          />
+        </label>
 
         <label
           className={`upload-zone${dragging ? " is-dragging" : ""}`}
@@ -229,17 +298,19 @@ export default function Home() {
           )}
         </label>
 
-        <textarea
-          placeholder="...or paste your notes directly here"
-          value={notesText}
-          onChange={(e) => setNotesText(e.target.value)}
-          rows={8}
-        />
+        <label className="field">
+          <span>Or paste your notes</span>
+          <textarea
+            value={notesText}
+            onChange={(e) => setNotesText(e.target.value)}
+            rows={9}
+          />
+        </label>
         <p className={overLimit ? "error-text" : "hint"}>
-          {notesText.length.toLocaleString()} /{" "}
+          {notesText.length.toLocaleString()} of{" "}
           {MAX_NOTES_CHARS.toLocaleString()} characters
           {overLimit &&
-            " - too long. Trim the notes or split them into several decks."}
+            ". That's too long: trim the notes or split them into several decks."}
         </p>
 
         {error && (
@@ -247,51 +318,21 @@ export default function Home() {
             {error}
           </p>
         )}
-        <div className="submit-row">
-          <button type="submit" disabled={!canSubmit}>
-            {submitting ? "Starting..." : "Generate flashcards"}
-          </button>
-          {!canSubmit && !submitting && !reading && !overLimit && (
-            <span className="hint">
-              {!deckName.trim()
-                ? "Add a deck name to continue."
-                : "Add some notes to continue."}
-            </span>
-          )}
-        </div>
-      </form>
-
-      {notice && (
-        <div className="notice" role="status">
-          <span>
-            <strong>{notice.name}</strong> is ready with {notice.count} cards.
-          </span>
-          <Link to={`/deck/${notice.deckId}`}>Review the cards</Link>
-        </div>
-      )}
-
-      <div className="card">
-        <h2>Your decks</h2>
-        {loadError && (
-          <p className="error-text" role="alert">
-            {loadError}{" "}
-            <button type="button" className="link-button" onClick={loadDecks}>
-              Retry
-            </button>
+        <button
+          type="submit"
+          className="btn btn-primary btn-lg btn-block"
+          disabled={!canSubmit}
+        >
+          {submitting ? "Starting..." : "Generate flashcards"}
+        </button>
+        {!canSubmit && !submitting && !reading && !overLimit && (
+          <p className="hint center">
+            {!deckName.trim()
+              ? "Add a deck name to continue."
+              : "Add some notes to continue."}
           </p>
         )}
-        {decks === null ? (
-          !loadError && <p className="empty-state">Loading...</p>
-        ) : decks.length === 0 ? (
-          <p className="empty-state">No decks yet — create one above.</p>
-        ) : (
-          <div className="deck-list">
-            {decks.map((d) => (
-              <DeckCard key={d.deck_id} deck={d} onRemove={handleRemove} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+      </form>
+    </main>
   );
 }

@@ -122,12 +122,12 @@ export default function Deck() {
   const canEdit = deck.status === "ready";
 
   return (
-    <div className="page">
+    <main className="page deck-page">
       <Link to="/" className="back-link">
         &larr; All decks
       </Link>
 
-      <div className="card">
+      <header className="deck-header">
         {renaming === null ? (
           <div className="deck-title-row">
             <h1 className="deck-title">{deck.deck_name}</h1>
@@ -176,10 +176,16 @@ export default function Deck() {
           </p>
         )}
 
+        {canEdit && (
+          <p className="section-sub">
+            {cards.length} card{cards.length === 1 ? "" : "s"}. Check them over
+            and fix anything Claude got wrong before you study.
+          </p>
+        )}
         {generating && (
           <p className="status-line">
-            <span className="spinner" aria-hidden="true" /> Generating
-            flashcards...
+            <span className="spinner" aria-hidden="true" /> Claude is writing
+            the cards. This page updates when they're ready.
           </p>
         )}
         {deck.status === "failed" && (
@@ -212,11 +218,10 @@ export default function Deck() {
             Delete deck
           </button>
         </div>
-      </div>
+      </header>
 
       {canEdit && (
-        <div className="card">
-          <h2>{cards.length} cards</h2>
+        <div className="sheet">
           {cards.length === 0 && (
             <p className="empty-state">This deck has no cards.</p>
           )}
@@ -268,10 +273,8 @@ export default function Deck() {
                 </li>
               ) : (
                 <li key={c.card_id} className="card-row">
-                  <div>
-                    <p className="row-front">{c.front}</p>
-                    <p className="row-back">{c.back}</p>
-                  </div>
+                  <p className="row-front">{c.front}</p>
+                  <p className="row-back">{c.back}</p>
                   <div className="row-actions">
                     <button
                       type="button"
@@ -295,6 +298,6 @@ export default function Deck() {
           </ul>
         </div>
       )}
-    </div>
+    </main>
   );
 }

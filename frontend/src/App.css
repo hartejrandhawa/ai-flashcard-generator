@@ -1,215 +1,311 @@
-/* ---- shell ---- */
+/* ================================================================ shell */
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 700px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 18px 24px 0;
+  padding: 20px 24px;
+}
+.brand-link {
+  text-decoration: none;
 }
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--serif);
   font-weight: 700;
-  font-size: 18px;
-  color: var(--text);
+  font-size: 19px;
+  color: var(--ink);
 }
+/* A tiny index card: outline plus the red header line. */
+.brand-mark {
+  width: 20px;
+  height: 14px;
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  background: linear-gradient(var(--margin-red), var(--margin-red)) no-repeat 0
+    3px / 100% 1.5px;
+}
+
 .page {
-  max-width: 700px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 24px 24px 80px;
+  padding: 8px 24px 96px;
+}
+.page-narrow {
+  max-width: 560px;
 }
 .back-link {
   display: inline-block;
-  margin-bottom: 16px;
-  font-size: 13px;
-}
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 22px;
   margin-bottom: 20px;
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
 }
-.card h2 {
-  margin: 0 0 14px;
-  font-size: 15px;
-}
-.centered {
-  text-align: center;
-}
-.centered .btn {
-  margin-top: 8px;
-}
-code {
-  background: var(--accent-soft);
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-size: 0.9em;
+.back-link:hover {
+  color: var(--ink);
 }
 
-.error-text {
-  color: var(--danger);
-  font-size: 13px;
+.sheet {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 24px;
 }
-.empty-state {
-  color: var(--text-muted);
-  font-size: 14px;
+.sheet-title {
+  font-family: var(--serif);
+  font-size: 21px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.lead {
+  font-size: 17px;
+  color: var(--muted);
+  margin: 0 0 24px;
+  max-width: 46ch;
 }
 .hint {
-  color: var(--text-muted);
-  font-size: 12px;
+  color: var(--muted);
+  font-size: 13px;
   margin: 0;
 }
-
-.steps {
-  text-align: left;
-  max-width: 420px;
-  margin: 0 auto 18px;
-  padding-left: 20px;
-  color: var(--text-muted);
+.center {
+  text-align: center;
+}
+.error-text {
+  color: var(--danger);
   font-size: 14px;
-  line-height: 1.6;
+  margin: 0;
 }
-.steps strong {
-  color: var(--text);
+.empty-state {
+  color: var(--muted);
+}
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
-/* ---- buttons ---- */
+kbd {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 1px 6px;
+  border: 1px solid var(--rule-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--paper);
+}
+
+/* ================================================================ buttons */
 .btn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 8px 14px;
-  border-radius: 8px;
   border: 1px solid transparent;
-  font-size: 13px;
+  border-radius: 6px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.2;
-  text-align: center;
+  text-decoration: none;
   cursor: pointer;
 }
 .btn:disabled {
-  opacity: 0.5;
-  cursor: default;
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-lg {
+  padding: 12px 20px;
+  font-size: 15px;
+}
+.btn-block {
+  width: 100%;
 }
 .btn-primary {
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--ink);
+  color: var(--on-ink);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent-dark);
+  background: var(--ink-hover);
 }
 .btn-secondary {
-  background: var(--surface);
-  color: var(--text);
-  border-color: var(--border);
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--rule-strong);
 }
-.btn-secondary:hover {
-  border-color: var(--accent);
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--ink);
 }
 .btn-quiet {
   background: transparent;
-  color: var(--text-muted);
+  color: var(--muted);
 }
 .btn-quiet:hover:not(:disabled) {
-  color: var(--text);
-  background: var(--accent-soft);
+  background: var(--soft);
+  color: var(--ink);
 }
 .btn-danger {
-  background: var(--surface);
+  background: transparent;
   color: var(--danger);
-  border-color: var(--danger-border);
 }
 .btn-danger:hover:not(:disabled) {
   background: var(--danger-soft);
-}
-.btn-disabled {
-  background: var(--muted-fill);
-  color: var(--text-muted);
-  cursor: default;
 }
 .link-button {
   background: none;
   border: none;
   padding: 0;
-  color: var(--accent);
+  color: var(--ink);
   text-decoration: underline;
   font-size: inherit;
 }
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+
+/* ================================================================ index card */
+/* The stack: offset, slightly rotated sheets behind the card show what's left. */
+.card-stack {
+  position: relative;
+  isolation: isolate;
+}
+.card-stack::before,
+.card-stack::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  display: none;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+.card-stack.depth-1::before,
+.card-stack.depth-2::before {
+  display: block;
+  transform: translate(6px, 7px) rotate(1.1deg);
+}
+.card-stack.depth-2::after {
+  display: block;
+  transform: translate(-5px, 11px) rotate(-1.4deg);
 }
 
-/* ---- create form ---- */
-.create-form {
+.index-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-.create-form input,
-.create-form textarea {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
   width: 100%;
-  resize: vertical;
-  background: var(--surface);
-  color: var(--text);
+  padding: 0;
+  text-align: left;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  box-shadow:
+    0 1px 2px rgb(31 42 68 / 0.08),
+    0 12px 28px -16px rgb(31 42 68 / 0.35);
 }
-.submit-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+.index-card:hover {
+  border-color: var(--rule-strong);
 }
-.submit-row button {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
+/* Question: above the red header line, like the title line of a real card. */
+.ic-front {
+  display: block;
+  padding: 26px 32px 16px;
+  border-bottom: 2px solid var(--margin-red);
+  font-family: var(--serif);
+  font-size: 24px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+/* Answer: written on the ruled lines; line-height matches the line spacing. */
+.ic-lines {
+  display: block;
+  min-height: calc(var(--line) * 5 + 8px);
+  padding: 2px 32px 6px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--line) - 1px),
+    var(--rule) calc(var(--line) - 1px),
+    var(--rule) var(--line)
+  );
+  background-position: 0 2px;
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: var(--line);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.ic-hint {
+  font-family: var(--sans);
   font-size: 14px;
+  color: var(--muted);
 }
-.submit-row button:hover:not(:disabled) {
-  background: var(--accent-dark);
+.ic-back {
+  display: block;
+  animation: write-in 0.22s ease-out;
 }
-.submit-row button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+@keyframes write-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ic-back {
+    animation: none;
+  }
 }
 
-.upload-zone {
-  display: flex;
+/* ================================================================ welcome */
+.welcome {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 64px;
   align-items: center;
-  justify-content: center;
-  min-height: 70px;
-  padding: 12px;
-  border: 1.5px dashed var(--border);
-  border-radius: 8px;
-  background: var(--accent-soft);
-  cursor: pointer;
+  padding-top: 48px;
+}
+.welcome h1 {
+  font-family: var(--serif);
+  font-size: 52px;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin: 0 0 20px;
+  max-width: 13ch;
+}
+.welcome-demo {
+  padding: 0 12px 12px 0;
+}
+.demo-caption {
+  margin: 22px 0 0;
   font-size: 13px;
+  color: var(--muted);
   text-align: center;
 }
-.upload-zone:hover,
-.upload-zone.is-dragging {
-  border-color: var(--accent);
+
+/* ================================================================ home */
+.home {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px 48px;
+  align-items: start;
 }
-.upload-zone.is-dragging {
-  background: var(--accent-soft-strong);
+.home .notice {
+  grid-column: 1 / -1;
 }
-.upload-hint {
-  color: var(--text-muted);
+.section-head {
+  margin-bottom: 24px;
 }
-.upload-hint strong {
-  color: var(--accent);
+.section-head h1 {
+  font-family: var(--serif);
+  font-size: 34px;
+  line-height: 1.15;
+  margin: 0 0 6px;
 }
-.file-name {
-  font-weight: 600;
-  color: var(--accent);
-  overflow-wrap: anywhere;
+.section-sub {
+  margin: 0;
+  color: var(--muted);
 }
 
 .notice {
@@ -218,81 +314,103 @@ code {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  background: var(--success-soft);
-  border: 1px solid var(--success-border);
-  color: var(--success);
-  border-radius: 10px;
   padding: 12px 16px;
-  margin-bottom: 20px;
-  font-size: 14px;
+  border-left: 3px solid var(--success);
+  border-radius: 4px;
+  background: var(--success-soft);
+  color: var(--success);
 }
 .notice a {
   font-weight: 600;
   color: var(--success);
-  text-decoration: underline;
 }
 
-/* ---- deck list ---- */
 .deck-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 24px 20px;
 }
-.deck-card {
+/* A deck is a small stack of cards: two offset edges drawn with box-shadow. */
+.deck-tile {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px;
-  color: var(--text);
+  gap: 12px;
+  margin: 0 8px 8px 0;
+  padding: 16px 18px 18px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  box-shadow:
+    4px 4px 0 -1px var(--paper),
+    4px 4px 0 0 var(--rule),
+    8px 8px 0 -1px var(--paper),
+    8px 8px 0 0 var(--rule);
 }
-.deck-card:hover {
-  border-color: var(--accent);
-}
-.deck-card h3 {
-  margin: 0 0 4px;
-  font-size: 15px;
+.deck-tile h3 {
+  margin: 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--margin-red);
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.25;
   overflow-wrap: anywhere;
 }
-.deck-card p {
+.deck-tile h3 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.deck-tile h3 a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.deck-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-.deck-card .error-text {
-  color: var(--danger);
-}
-.deck-failed {
-  border-color: var(--danger-border);
-}
-.deck-failed .btn-quiet {
-  margin-left: -14px;
+  font-size: 14px;
+  color: var(--muted);
 }
 .deck-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: auto;
 }
-.deck-actions.center {
-  justify-content: center;
+/* Not written yet: no card stack, dashed outline, ruled line instead of the red one. */
+.deck-tile.is-generating {
+  box-shadow: none;
+  border-style: dashed;
+  border-color: var(--rule-strong);
+  background: transparent;
+}
+.deck-tile.is-generating h3 {
+  border-bottom-color: var(--rule);
+}
+.deck-tile.is-failed {
+  box-shadow: none;
+}
+.deck-tile.is-failed h3 {
+  border-bottom-style: dashed;
 }
 
 .status-line {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
 }
 .spinner {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
   flex: none;
-  border: 2px solid var(--accent-soft-strong);
-  border-top-color: var(--accent);
+  border-radius: 50%;
+  border: 2px solid var(--rule);
+  border-top-color: var(--ink);
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin {
@@ -306,7 +424,112 @@ code {
   }
 }
 
-/* ---- deck page ---- */
+.empty-deck {
+  padding: 28px;
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: 4px;
+}
+.empty-deck p {
+  margin: 0 0 4px;
+  font-family: var(--serif);
+  font-size: 18px;
+}
+.empty-deck .hint {
+  font-family: var(--sans);
+  font-size: 14px;
+}
+
+/* ---- new deck form ---- */
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: 24px;
+}
+.create-form .sheet-title {
+  margin-bottom: 2px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field > span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.field input,
+.field textarea,
+.title-input,
+.card-row textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  background: var(--paper);
+  font-size: 15px;
+  font-weight: 400;
+  resize: vertical;
+}
+.field input:focus,
+.field textarea:focus,
+.title-input:focus,
+.card-row textarea:focus {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px rgb(47 111 219 / 0.18);
+}
+.upload-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 76px;
+  padding: 12px 16px;
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: 6px;
+  background: var(--soft);
+  font-size: 14px;
+  text-align: center;
+  cursor: pointer;
+}
+.upload-zone:hover,
+.upload-zone.is-dragging {
+  border-color: var(--ink);
+}
+.upload-zone:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.upload-hint {
+  color: var(--muted);
+}
+.upload-hint strong {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.file-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* ================================================================ deck page */
+.deck-page {
+  max-width: 820px;
+}
+.deck-header {
+  margin-bottom: 28px;
+}
+.deck-header .deck-actions {
+  margin-top: 16px;
+}
+.deck-header .section-sub,
+.deck-header .status-line,
+.deck-header .error-text {
+  margin-top: 8px;
+}
 .deck-title-row {
   display: flex;
   align-items: center;
@@ -314,207 +537,215 @@ code {
   flex-wrap: wrap;
 }
 .deck-title {
-  margin: 0;
-  font-size: 22px;
   flex: 1;
   min-width: 0;
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 36px;
+  line-height: 1.15;
   overflow-wrap: anywhere;
 }
 .title-input {
   flex: 1;
-  min-width: 160px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 16px;
+  min-width: 180px;
+  font-family: var(--serif);
+  font-size: 22px;
 }
+
 .card-rows {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .card-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 0;
-  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: start;
+  padding: 16px 0;
+  border-top: 1px solid var(--rule);
 }
 .card-row:first-child {
   border-top: none;
+  padding-top: 0;
 }
-.card-row.editing {
-  flex-direction: column;
-  align-items: stretch;
-}
-.card-row.editing label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-/* font: inherit would pick up the label's bold weight */
-.card-row textarea {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--text);
-  resize: vertical;
+.card-row:last-child {
+  padding-bottom: 0;
 }
 .row-front {
-  margin: 0 0 4px;
-  font-weight: 600;
-  font-size: 14px;
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 .row-back {
   margin: 0;
-  color: var(--text-muted);
-  font-size: 14px;
+  color: var(--muted);
   overflow-wrap: anywhere;
 }
 .row-actions {
   display: flex;
   gap: 2px;
-  flex: none;
+}
+.card-row.editing {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+.card-row.editing label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.card-row.editing .deck-actions {
+  margin-top: 0;
 }
 
-/* ---- quiz ---- */
+/* ================================================================ quiz */
+.quiz {
+  max-width: 700px;
+}
 .quiz-progress {
   display: flex;
   align-items: center;
-  gap: 12px;
-  color: var(--text-muted);
-  font-size: 13px;
-  margin: 0 0 12px;
+  gap: 14px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: var(--muted);
 }
 .progress-track {
   flex: 1;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--muted-fill);
+  height: 4px;
+  border-radius: 2px;
+  background: var(--rule);
   overflow: hidden;
 }
 .progress-fill {
   height: 100%;
-  background: var(--accent);
-  transition: width 0.2s ease;
+  background: var(--ink);
+  transition: width 0.25s ease;
 }
-
-.flashcard {
-  width: 100%;
-  min-height: 160px;
-  padding: 36px 24px;
-  border: none;
-  border-radius: 12px;
-  background: var(--accent-soft);
-  color: inherit;
-  font: inherit;
-  text-align: center;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+.quiz .error-text {
+  margin-top: 20px;
 }
-.flashcard:hover {
-  background: var(--accent-soft-strong);
-}
-.flashcard-label {
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--accent);
-  font-weight: 700;
-}
-.flashcard-text {
-  font-size: 18px;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-}
-.is-flipped .flashcard-text:not(.answer) {
-  font-size: 15px;
-  color: var(--text-muted);
-}
-.flashcard-divider {
-  width: 48px;
-  height: 1px;
-  background: var(--accent-soft-strong);
-  margin: 8px 0;
-}
-.flip-hint {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 8px;
+.quiz-keys {
+  margin-top: 28px;
 }
 
 .rating-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 28px;
+}
+.rate {
   display: flex;
-  gap: 8px;
-  margin-top: 16px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px 11px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--rule-strong);
+  border-radius: 6px;
+  text-align: left;
 }
-.rating-row button {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
-  border-top-width: 3px;
+.rate:hover:not(:disabled) {
+  border-color: var(--rule-strong);
+  background: var(--soft);
 }
-.rating-row button:disabled {
-  opacity: 0.5;
-  cursor: default;
+.rate:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
-/* Two classes outrank ".rating-row button", so no !important is needed. */
-.rating-row .rate-again {
-  border-top-color: var(--danger);
+.rate-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-weight: 700;
 }
-.rating-row .rate-hard {
+.rate-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+/* Two classes beat ".rate:hover", so the colour survives hover. */
+.rate.rate-again,
+.rate.rate-again:hover {
+  border-top-color: var(--margin-red);
+}
+.rate.rate-hard,
+.rate.rate-hard:hover {
   border-top-color: var(--warn);
 }
-.rating-row .rate-good {
+.rate.rate-good,
+.rate.rate-good:hover {
   border-top-color: var(--success);
 }
-.rating-row .rate-easy {
-  border-top-color: var(--info);
-}
-.rating-row button:hover:not(:disabled) {
-  background: var(--accent-soft);
-}
-.key-hint {
-  font-weight: 400;
-  color: var(--text-muted);
-  font-size: 11px;
-  margin-left: 4px;
+.rate.rate-easy,
+.rate.rate-easy:hover {
+  border-top-color: var(--focus);
 }
 
-@media (max-width: 480px) {
+.done .deck-actions {
+  margin-top: 0;
+}
+
+/* ================================================================ responsive */
+@media (max-width: 880px) {
+  .home {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .create-form {
+    position: static;
+  }
+  .welcome {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+    padding-top: 16px;
+  }
+  .welcome h1 {
+    font-size: 40px;
+  }
+}
+@media (max-width: 560px) {
   .page,
   .topbar {
     padding-left: 16px;
     padding-right: 16px;
   }
-  .rating-row {
-    flex-wrap: wrap;
+  .section-head h1,
+  .deck-title {
+    font-size: 28px;
   }
-  .rating-row button {
-    flex: 1 1 40%;
+  .welcome h1 {
+    font-size: 34px;
+  }
+  .ic-front {
+    padding: 20px 20px 14px;
+    font-size: 20px;
+  }
+  .ic-lines {
+    padding-left: 20px;
+    padding-right: 20px;
+    font-size: 17px;
+  }
+  .rating-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .card-row {
-    flex-direction: column;
-    gap: 4px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
   }
   .row-actions {
     margin-left: -14px;
+  }
+  .sheet {
+    padding: 20px;
   }
 }

@@ -7,17 +7,27 @@ import {
   login,
   logout,
 } from "./auth";
+import IndexCard from "./components/IndexCard";
 import Home from "./pages/Home";
 import Deck from "./pages/Deck";
 import Quiz from "./pages/Quiz";
 import "./App.css";
 
+function Brand() {
+  return (
+    <span className="brand">
+      <span className="brand-mark" aria-hidden="true" />
+      Flashcard Generator
+    </span>
+  );
+}
+
 function Layout() {
   return (
     <>
       <nav className="topbar">
-        <Link to="/" className="brand">
-          Flashcard Generator
+        <Link to="/" className="brand-link">
+          <Brand />
         </Link>
         <button type="button" className="btn btn-quiet" onClick={logout}>
           Sign out
@@ -30,12 +40,55 @@ function Layout() {
 
 function Notice({ title, children }) {
   return (
-    <div className="page">
-      <div className="card centered">
-        <h2>{title}</h2>
+    <div className="page page-narrow">
+      <div className="sheet">
+        <h2 className="sheet-title">{title}</h2>
         {children}
       </div>
     </div>
+  );
+}
+
+function Welcome({ error }) {
+  const [revealed, setRevealed] = useState(false);
+  return (
+    <>
+      <nav className="topbar">
+        <Brand />
+      </nav>
+      <main className="page welcome">
+        <div className="welcome-copy">
+          <h1>Turn your notes into flashcards</h1>
+          <p className="lead">
+            Upload lecture notes or a PDF and Claude writes the cards. Spaced
+            repetition then brings each card back just before you'd forget it.
+          </p>
+          {error && (
+            <p className="error-text" role="alert">
+              {error}
+            </p>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary btn-lg"
+            onClick={login}
+          >
+            Sign in or create an account
+          </button>
+        </div>
+        <div className="welcome-demo">
+          <IndexCard
+            front="Which organelle produces most of a cell's ATP?"
+            back="The mitochondrion, through cellular respiration."
+            revealed={revealed}
+            onToggle={() => setRevealed((r) => !r)}
+            depth={2}
+            hint="Tap to see the answer"
+          />
+          <p className="demo-caption">A card generated from biology notes.</p>
+        </div>
+      </main>
+    </>
   );
 }
 
@@ -66,29 +119,7 @@ export default function App() {
     );
   }
   if (status === "loading") return <Notice title="Signing you in..." />;
-  if (status === "out") {
-    return (
-      <Notice title="Turn your notes into flashcards">
-        <ol className="steps">
-          <li>
-            <strong>Upload</strong> a PDF or paste your notes.
-          </li>
-          <li>
-            <strong>Review</strong> the cards Claude writes, and edit any you
-            want to change.
-          </li>
-          <li>
-            <strong>Study</strong> with spaced repetition: each card comes back
-            just before you'd forget it.
-          </li>
-        </ol>
-        {error && <p className="error-text">{error}</p>}
-        <button type="button" className="btn btn-primary" onClick={login}>
-          Sign in or create an account
-        </button>
-      </Notice>
-    );
-  }
+  if (status === "out") return <Welcome error={error} />;
 
   return (
     <BrowserRouter>
