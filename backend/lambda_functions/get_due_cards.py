@@ -1,56 +1,44 @@
 """
-get_due_cards.py
------------------
-Lambda handler: returns cards in a deck that are due for review today,
-based on each card's next_review date (SM-2 scheduling).
-
-Expected event (API Gateway proxy integration, query string param):
-  GET /decks/{deck_id}/due
+get_due_cards.py  (GET /decks/{deck_id}/due?today=YYYY-MM-DD)
+-------------------------------------------------------------
+Returns the cards in one of the user's decks that are due for review,
+based on each card's SM-2 next_review date.
 """
 
-import json
-from datetime import date
-
-from db import get_cards_for_deck
-from sm2 import CardState, is_due
-
-
-def _card_to_state(card: dict) -> CardState:
-    return CardState(
-        repetitions=int(card.get("repetitions", 0)),
-        interval_days=int(card.get("interval_days", 0)),
-        easiness_factor=float(card.get("easiness_factor", 2.5)),
-        next_review=date.fromisoformat(card["next_review"]) if card.get("next_review") else None,
-    )
+from common import (
+    ApiError,
+    api_handler,
+    get_user_id,
+    parse_today,
+    path_param,
+    query_param,
+    response,
+)
+from db import get_cards_for_deck, get_owned_deck
+from sm2 import is_due, state_from_item
 
 
+@api_handler
 def handler(event, context):
-    try:
-        deck_id = (event.get("pathParameters") or {}).get("deck_id")
-        if not deck_id:
-            return _response(400, {"error": "deck_id is required"})
+    user_id = get_user_id(event)
+    deck_id = path_param(event, "deck_id")
+    today = parse_today(query_param(event, "today"))
 
-        cards = get_cards_for_deck(deck_id)
-        today = date.today()
+    # 404 (not 403) for other people's decks, so deck ids can't be probed.
+    if not get_owned_deck(deck_id, user_id):
+        raise ApiError(404, "Deck not found")
 
-        due_cards = [
-            {"card_id": c["card_id"], "front": c["front"], "back": c["back"]}
-            for c in cards
-            if is_due(_card_to_state(c), today)
-        ]
+    due = [c for c in get_cards_for_deck(deck_id) if is_due(state_from_item(c), today)]
+    due.sort(key=lambda c: c.get("next_review") or "")
 
-        return _response(200, {"deck_id": deck_id, "due_cards": due_cards, "total_due": len(due_cards)})
-
-    except Exception as e:
-        return _response(500, {"error": str(e)})
-
-
-def _response(status_code, body):
-    return {
-        "statusCode": status_code,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
+    return response(
+        200,
+        {
+            "deck_id": deck_id,
+            "due_cards": [
+                {"card_id": c["card_id"], "front": c["front"], "back": c["back"]}
+                for c in due
+            ],
+            "total_due": len(due),
         },
-        "body": json.dumps(body),
-    }
+    )
