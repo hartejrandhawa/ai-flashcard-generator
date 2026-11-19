@@ -59,6 +59,17 @@ def review_card(state: CardState, quality: int, today: date | None = None) -> Ca
     )
 
 
+def state_from_item(item: dict) -> CardState:
+    """Build a CardState from a DynamoDB card item (numbers arrive as Decimal)."""
+    next_review = item.get("next_review")
+    return CardState(
+        repetitions=int(item.get("repetitions", 0)),
+        interval_days=int(item.get("interval_days", 0)),
+        easiness_factor=float(item.get("easiness_factor", 2.5)),
+        next_review=date.fromisoformat(next_review) if next_review else None,
+    )
+
+
 def is_due(state: CardState, today: date | None = None) -> bool:
     today = today or date.today()
     return state.next_review is None or state.next_review <= today
