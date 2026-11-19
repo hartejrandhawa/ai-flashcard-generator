@@ -3,10 +3,10 @@ import { useParams, Link } from "react-router-dom";
 import { api } from "../api/client";
 
 const RATINGS = [
-  { label: "Again", quality: 1, key: "1" },
-  { label: "Hard", quality: 3, key: "2" },
-  { label: "Good", quality: 4, key: "3" },
-  { label: "Easy", quality: 5, key: "4" },
+  { label: "Again", quality: 1, key: "1", tone: "again" },
+  { label: "Hard", quality: 3, key: "2", tone: "hard" },
+  { label: "Good", quality: 4, key: "3", tone: "good" },
+  { label: "Easy", quality: 5, key: "4", tone: "easy" },
 ];
 
 export default function Quiz() {
@@ -45,6 +45,15 @@ export default function Quiz() {
 
   const current = queue[index];
 
+  const advance = useCallback(
+    (requeue) => {
+      if (requeue) setQueue((q) => [...q, current]); // come back to it this session
+      setFlipped(false);
+      setIndex((i) => i + 1);
+    },
+    [current],
+  );
+
   const rate = useCallback(
     async (quality) => {
       // `busy` stops a double-click from submitting the same card twice.
@@ -59,16 +68,21 @@ export default function Quiz() {
           submitted.current.add(current.card_id);
           setReviewed((n) => n + 1);
         }
-        if (quality === 1) setQueue((q) => [...q, current]); // come back to it this session
-        setFlipped(false);
-        setIndex((i) => i + 1);
+        advance(quality === 1);
       } catch (err) {
-        setActionError(err.message); // keep the card on screen so the rating can be retried
+        if (err.status === 409) {
+          // Already reviewed elsewhere (another tab or device). Retrying would
+          // schedule it twice, so treat it as done and move on.
+          submitted.current.add(current.card_id);
+          advance(false);
+        } else {
+          setActionError(err.message); // keep the card on screen so the rating can be retried
+        }
       } finally {
         setBusy(false);
       }
     },
-    [current, busy],
+    [current, busy, advance],
   );
 
   // Keyboard: space/enter flips (when nothing is focused), 1-4 rate.
@@ -121,39 +135,62 @@ export default function Quiz() {
 
       {!current ? (
         <div className="card centered">
-          <h2>All done for now</h2>
+          <h2>{reviewed > 0 ? "Session complete" : "Nothing due"}</h2>
           <p className="empty-state">
             {reviewed > 0
               ? `You reviewed ${reviewed} card${reviewed === 1 ? "" : "s"}. `
               : ""}
-            Nothing else is due in this deck — come back later.
+            Nothing else is due in this deck. Come back later.
           </p>
-          <button type="button" className="btn btn-secondary" onClick={load}>
-            Check again
-          </button>
+          <div className="deck-actions center">
+            <Link to="/" className="btn btn-primary">
+              Back to decks
+            </Link>
+            <Link to={`/deck/${deckId}`} className="btn btn-secondary">
+              View cards
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="card quiz-card">
-          <p className="quiz-progress">
-            Card {index + 1} of {queue.length}
-          </p>
+          <div className="quiz-progress">
+            <span>
+              Card {index + 1} of {queue.length}
+            </span>
+            <div
+              className="progress-track"
+              role="progressbar"
+              aria-label="Session progress"
+              aria-valuemin={0}
+              aria-valuemax={queue.length}
+              aria-valuenow={index}
+            >
+              <div
+                className="progress-fill"
+                style={{ width: `${(index / queue.length) * 100}%` }}
+              />
+            </div>
+          </div>
+
           <button
             type="button"
-            className="flashcard"
+            className={`flashcard${flipped ? " is-flipped" : ""}`}
             onClick={() => setFlipped((f) => !f)}
             aria-label={
               flipped
-                ? "Answer. Press to show the question."
+                ? "Answer shown. Press to hide it."
                 : "Question. Press to reveal the answer."
             }
           >
-            <span className="flashcard-label">
-              {flipped ? "Answer" : "Question"}
-            </span>
-            <span className="flashcard-text">
-              {flipped ? current.back : current.front}
-            </span>
-            {!flipped && (
+            <span className="flashcard-label">Question</span>
+            <span className="flashcard-text">{current.front}</span>
+            {flipped ? (
+              <>
+                <span className="flashcard-divider" aria-hidden="true" />
+                <span className="flashcard-label">Answer</span>
+                <span className="flashcard-text answer">{current.back}</span>
+              </>
+            ) : (
               <span className="flip-hint">
                 Click or press space to reveal the answer
               </span>
@@ -172,6 +209,7 @@ export default function Quiz() {
                 <button
                   key={r.quality}
                   type="button"
+                  className={`rate-${r.tone}`}
                   onClick={() => rate(r.quality)}
                   disabled={busy}
                 >

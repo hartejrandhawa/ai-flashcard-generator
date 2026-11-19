@@ -39,10 +39,13 @@ async function request(path, { method = "GET", body } = {}) {
   }
 
   const data = await res.json().catch(() => null);
-  if (!res.ok)
-    throw new Error(
+  if (!res.ok) {
+    const err = new Error(
       data?.error || data?.message || `Request failed (${res.status})`,
     );
+    err.status = res.status; // lets callers react to specific codes (e.g. 409)
+    throw err;
+  }
   return data;
 }
 
