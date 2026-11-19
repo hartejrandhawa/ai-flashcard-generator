@@ -1,88 +1,119 @@
 # AI Flashcard Generator
 
-Upload your notes, get flashcards generated automatically, and review them
-on a spaced-repetition schedule (the same SM-2 algorithm behind Anki) —
-built to close a real gap: nothing else in the portfolio is actually
-deployed and running on AWS, only claimed via an internship.
+Turn study notes into flashcards and review them on a spaced-repetition schedule.
 
-## What it does
+1. Sign in, then upload a PDF / `.txt` file or paste your notes.
+2. Claude writes up to 30 question/answer cards. Review, edit or delete them on the deck page.
+3. Study the cards that are due. Rate each one Again / Hard / Good / Easy.
+4. [SM-2](https://en.wikipedia.org/wiki/SuperMemo#Algorithm_SM-2) (the algorithm behind Anki) schedules the next review: cards you know come back less often, cards you struggle with come back sooner.
+5. Export any deck as CSV (importable into Anki).
 
-1. Upload a PDF or paste notes directly
-2. Claude generates flashcards (question/answer pairs) from the content
-3. Review due cards in a quiz view; rate your recall (Again/Hard/Good/Easy)
-4. The SM-2 algorithm schedules each card's next review based on how well
-   you remembered it — cards you know well show up less often, cards you
-   struggle with come back sooner
+## Architecture
 
-## What's been tested vs. what needs your own setup
+```
+React (Vite) ──HTTPS + Cognito ID token──▶ API Gateway (Cognito authorizer)
+     │                                          │
+     │ sign-in (PKCE)                           ├─ POST   /decks              ─▶ generate_flashcards ──async──▶ generate_worker ─▶ Claude
+     ▼                                          ├─ GET    /decks              ─▶ list_decks
+ Cognito hosted page                            ├─ PATCH/DELETE /decks/{id}   ─▶ manage_deck
+                                                ├─ GET    /decks/{id}/cards   ─▶ get_deck_cards
+                                                ├─ GET    /decks/{id}/due     ─▶ get_due_cards
+                                                ├─ PATCH/DELETE /cards/{id}   ─▶ manage_card
+                                                └─ POST   /reviews            ─▶ submit_review
+                                                          │
+                                                   DynamoDB: Decks, Cards
+```
 
-This was built in a sandbox with no AWS access and no Anthropic API key,
-so testing split into two categories:
+- **Backend:** Python 3.12 Lambdas deployed with AWS SAM (`backend/`).
+- **Frontend:** React + Vite (`frontend/`). PDF text is extracted in the browser with pdfjs, so the server only ever sees text.
+- **Generation is asynchronous.** `POST /decks` validates the request, creates the deck with `status: "generating"` and returns `202`. A separate worker function calls Claude and marks the deck `ready` or `failed`. The frontend polls `GET /decks`. A model call can take longer than API Gateway's 29-second limit, so it can't run inside the request.
+- **Identity** comes from the verified Cognito token (`sub` claim). The server never trusts a user id sent by the client, and other users' decks and cards return `404`.
 
-**Fully tested (25 pytest tests, using `moto` to mock AWS locally):**
-- SM-2 algorithm — verified interval growth (1 → 6 → 15 → 38 → 95 → 238
-  days with consistent good recall), correct reset to 1 day on a
-  forgotten card, and the easiness-factor floor at 1.3
-- Deck/card creation, due-card queries, and review submission — full
-  DynamoDB read/write flow tested end-to-end, including all four Lambda
-  handlers with API-Gateway-shaped events
-- Input validation (rejects invalid quality scores, missing fields)
-- `generate_flashcards.py`'s handler logic and Claude-response parsing
-  (markdown code-fence stripping), with the Anthropic client mocked
-- Two real bugs caught and fixed during testing:
-  - DynamoDB's boto3 API rejects native Python floats — the easiness
-    factor field needed converting to `Decimal`, which would have
-    crashed on the very first write in a real deployment
-  - `list_decks.py` and `get_due_cards.py` read `queryStringParameters`
-    / `pathParameters` with `event.get(key, {})` — but real API Gateway
-    proxy events set these to `null`, not omit them, when empty. `.get()`
-    on `None` threw an `AttributeError`, which the handler's broad
-    exception handler turned into a misleading 500 instead of the
-    intended 400.
+### API
 
-Run them yourself: `cd backend && pip install -r requirements-dev.txt && pytest`
+All routes require `Authorization: <Cognito ID token>`. Errors are `{"error": "message"}`.
 
-**Not testable here, needs your own setup:**
-- The actual Claude API call in `generate_flashcards.py` — needs your own
-  `ANTHROPIC_API_KEY`
-- Real Lambda/API Gateway/DynamoDB/S3 deployment — this sandbox has no AWS
-  access at all
+| Method & path | Purpose |
+|---|---|
+| `POST /decks` | Body `{deck_name, notes_text}` (notes ≤ 50,000 chars). Returns `202 {deck_id, status}`. `429` once the daily limit is used. |
+| `GET /decks?today=YYYY-MM-DD` | The user's decks with `status`, `error`, `card_count`, `due_count`. |
+| `PATCH /decks/{id}` · `DELETE /decks/{id}` | Rename (`{deck_name}`) or delete a deck and its cards. |
+| `GET /decks/{id}/cards` | The deck plus all its cards. |
+| `GET /decks/{id}/due?today=` | Cards due for review. |
+| `PATCH /cards/{id}` · `DELETE /cards/{id}` | Edit (`{front, back}`) or delete a card. |
+| `POST /reviews` | Body `{card_id, quality 0-5, today?}`. `409` if the card was reviewed concurrently. |
 
-## Stack
+`today` is the browser's local date, so "due today" follows the user's day rather than UTC.
 
-Python (AWS Lambda handlers), DynamoDB, S3, API Gateway, Claude API, React (Vite)
+### Security notes
 
-## Deploying for real
+- The Anthropic API key lives in an SSM SecureString and is readable only by the worker function. It is never in the template or in Lambda environment variables.
+- Uploaded notes are untrusted. They are wrapped in `<notes>` tags, the system prompt says to treat them as data, and every card the model returns is validated, de-duplicated and length-capped before it is stored.
+- Spend controls: input size cap, a per-user daily generation limit (`DailyGenerationLimit`, default 20), and API Gateway throttling.
+- CORS defaults to `*` for development. Set `AllowedOrigin` to your real frontend origin in production.
 
-Requires the [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
-and an AWS account.
+## Deploying
+
+Requirements: an AWS account, the [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html), and an [Anthropic API key](https://console.anthropic.com).
+
+1. **Store the API key** (once; CloudFormation can't create SecureStrings):
+
+   ```bash
+   aws ssm put-parameter --name /flashcards/anthropic-api-key --type SecureString --value "sk-ant-..."
+   ```
+
+2. **Deploy the backend.** Pick a globally unique `CognitoDomainPrefix`:
+
+   ```bash
+   cd backend
+   cp samconfig.toml.example samconfig.toml   # edit the values
+   sam build
+   sam deploy
+   ```
+
+   The outputs include `ApiUrl`, `CognitoDomain` and `UserPoolClientId`.
+
+3. **Configure and run the frontend:**
+
+   ```bash
+   cd frontend
+   cp .env.example .env     # paste the three stack outputs
+   npm install
+   npm run dev              # http://localhost:5173
+   ```
+
+   `FrontendUrls` (stack parameter) must contain the exact origin you serve the app from, with a trailing slash, for sign-in to redirect back correctly. When you host the built app elsewhere, redeploy with that URL added.
+
+4. **Tearing down:** the tables have deletion protection. Redeploy with `TableDeletionProtection=false`, then `sam delete`.
+
+## Development
 
 ```bash
 cd backend
-sam build
-sam deploy --guided
-```
+uv sync
+uv run pytest             # moto mocks AWS; the Anthropic client is faked
 
-You'll be prompted for your Anthropic API key during deploy (stored securely,
-not in the code). SAM will output your API Gateway URL when done — put that
-in the frontend's `.env`:
-
-```bash
 cd frontend
-echo "VITE_API_BASE=https://your-api-url-here" > .env
 npm install
-npm run dev
+npm run lint
+npm run build
 ```
 
-## Testing the backend locally without deploying
+Notes:
 
-The Lambda functions can be tested directly without AWS using `moto`
-(mocks AWS services in-process):
+- No real AWS or Anthropic calls are made by the tests, so a green run doesn't prove a deployment works. The first `sam deploy` plus one real generation is the end-to-end check.
+- If this folder is synced by iCloud Drive, put the Python virtualenv outside it (`export UV_PROJECT_ENVIRONMENT=~/.cache/envs/flashcard-backend`). Thousands of small files in `.venv` can make imports crawl.
+- The model is set in `backend/lambda_functions/llm.py` (`CLAUDE_MODEL`).
 
-```bash
-pip install moto boto3 --break-system-packages
-python3 -m pytest tests/  # if you add pytest tests, or run functions directly like:
+## Project layout
+
 ```
-
-See `backend/lambda_functions/sm2.py` for the algorithm itself — it has no
-AWS dependency at all and can be tested completely standalone.
+backend/
+  template.yaml            SAM template: API, Cognito, tables, functions
+  lambda_functions/        handlers + common.py (shared helpers), db.py, llm.py, sm2.py
+  tests/                   pytest suite
+frontend/
+  src/auth.js              Cognito sign-in (PKCE)
+  src/api/client.js        authenticated API client
+  src/pages/               Home, Deck, Quiz
+```
