@@ -1,0 +1,23 @@
+[project]
+name = "flashcard-backend"
+version = "0.1.0"
+description = "Serverless backend for the AI flashcard generator"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic",
+    "boto3",
+]
+
+[dependency-groups]
+dev = [
+    "moto[dynamodb,ssm,lambda]",
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["lambda_functions"]
+testpaths = ["tests"]
+
+# Not a package: the Lambda code in lambda_functions/ is deployed by SAM.
+[tool.uv]
+package = false
