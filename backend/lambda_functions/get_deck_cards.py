@@ -6,7 +6,7 @@ the deck page (review/edit generated cards) and for CSV export.
 """
 
 from common import ApiError, api_handler, get_user_id, path_param, response
-from db import get_cards_for_deck, get_owned_deck
+from db import deck_status, get_cards_for_deck, get_owned_deck
 
 
 @api_handler
@@ -19,14 +19,15 @@ def handler(event, context):
         raise ApiError(404, "Deck not found")
 
     cards = sorted(get_cards_for_deck(deck_id), key=lambda c: c["front"].lower())
+    status, error = deck_status(deck)
     return response(
         200,
         {
             "deck": {
                 "deck_id": deck_id,
                 "deck_name": deck["deck_name"],
-                "status": deck.get("status", "ready"),
-                "error": deck.get("error"),
+                "status": status,
+                "error": error,
             },
             "cards": [
                 {

@@ -4,10 +4,16 @@ manage_deck.py  (PATCH /decks/{deck_id}, DELETE /decks/{deck_id})
 Rename or delete one of the user's decks (deleting also removes its cards).
 """
 
-from common import ApiError, api_handler, get_user_id, parse_body, path_param, response
+from common import (
+    MAX_DECK_NAME_CHARS,
+    ApiError,
+    api_handler,
+    get_user_id,
+    parse_body,
+    path_param,
+    response,
+)
 from db import delete_deck, get_owned_deck, rename_deck
-
-MAX_DECK_NAME_CHARS = 100
 
 
 @api_handler
@@ -28,9 +34,7 @@ def handler(event, context):
         if not isinstance(name, str) or not name.strip():
             raise ApiError(400, "deck_name is required")
         if len(name.strip()) > MAX_DECK_NAME_CHARS:
-            raise ApiError(
-                400, f"deck_name must be at most {MAX_DECK_NAME_CHARS} characters"
-            )
+            raise ApiError(400, f"deck_name must be at most {MAX_DECK_NAME_CHARS} characters")
         rename_deck(deck_id, name.strip())
         return response(200, {"deck_id": deck_id, "deck_name": name.strip()})
 

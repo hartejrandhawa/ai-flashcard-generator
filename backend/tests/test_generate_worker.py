@@ -4,7 +4,9 @@ from db import (
     STATUS_FAILED,
     STATUS_GENERATING,
     STATUS_READY,
+    claim_generation,
     create_deck,
+    delete_deck,
     get_cards_for_deck,
     get_deck,
     set_deck_status,
@@ -69,3 +71,27 @@ def test_deleted_deck_is_skipped(dynamodb_tables):
     with patch("generate_worker.generate_cards") as gen:
         handler({"deck_id": "gone", "notes_text": "notes"}, None)
     gen.assert_not_called()
+    assert get_deck("gone") is None  # no ownerless item created
+
+
+def test_only_one_concurrent_delivery_claims_the_deck(dynamodb_tables):
+    deck_id = _deck()
+    assert claim_generation(deck_id) is True
+    # A duplicate delivery arriving while the first is still running.
+    with patch("generate_worker.generate_cards") as gen:
+        handler({"deck_id": deck_id, "notes_text": "notes"}, None)
+    gen.assert_not_called()
+
+
+def test_deck_deleted_during_generation_leaves_nothing_behind(dynamodb_tables):
+    deck_id = _deck()
+
+    def generate_then_user_deletes(_notes):
+        delete_deck(deck_id)
+        return CARDS
+
+    with patch("generate_worker.generate_cards", side_effect=generate_then_user_deletes):
+        handler({"deck_id": deck_id, "notes_text": "notes"}, None)
+
+    assert get_deck(deck_id) is None
+    assert get_cards_for_deck(deck_id) == []

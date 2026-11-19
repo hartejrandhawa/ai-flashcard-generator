@@ -1,14 +1,20 @@
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
 
 from db import (
     NEW_CARD_DUE,
+    STALE_GENERATION_ERROR,
+    STATUS_FAILED,
+    STATUS_GENERATING,
+    STATUS_READY,
     ConflictError,
     add_card,
     add_cards,
     consume_generation_quota,
     create_deck,
+    deck_status,
     delete_card,
     delete_deck,
     get_card,
@@ -18,9 +24,28 @@ from db import (
     get_owned_deck,
     list_decks_for_user,
     rename_deck,
+    set_deck_status,
     update_card_schedule,
     update_card_text,
 )
+
+
+def test_set_deck_status_does_not_recreate_a_deleted_deck(dynamodb_tables):
+    deck_id = create_deck("user-1", "Bio")
+    delete_deck(deck_id)
+    assert set_deck_status(deck_id, STATUS_READY, card_count=3) is False
+    assert get_deck(deck_id) is None
+
+
+def test_deck_status_reports_abandoned_generation_as_failed():
+    now = datetime.now(UTC)
+    fresh = {"status": STATUS_GENERATING, "created_at": now.isoformat()}
+    stale = {"status": STATUS_GENERATING, "created_at": (now - timedelta(hours=1)).isoformat()}
+
+    assert deck_status(fresh) == (STATUS_GENERATING, None)
+    assert deck_status(stale) == (STATUS_FAILED, STALE_GENERATION_ERROR)
+    assert deck_status({"status": STATUS_FAILED, "error": "x"}) == (STATUS_FAILED, "x")
+    assert deck_status({}) == (STATUS_READY, None)  # decks from before statuses existed
 
 
 def test_create_and_list_decks(dynamodb_tables):
@@ -58,9 +83,7 @@ def test_rename_deck(dynamodb_tables):
 
 def test_add_card_and_query_by_deck(dynamodb_tables):
     deck_id = create_deck("user-1", "Deck")
-    card_id = add_card(
-        deck_id, "What is mitosis?", "Cell division producing two identical cells"
-    )
+    card_id = add_card(deck_id, "What is mitosis?", "Cell division producing two identical cells")
 
     cards = get_cards_for_deck(deck_id)
 
@@ -157,13 +180,9 @@ def test_conditional_schedule_update_rejects_stale_state(dynamodb_tables):
         expected_next_review=NEW_CARD_DUE,
     )
 
-    update_card_schedule(
-        repetitions=1, next_review="2026-01-02", **common
-    )  # first review wins
+    update_card_schedule(repetitions=1, next_review="2026-01-02", **common)  # first review wins
     with pytest.raises(ConflictError):
-        update_card_schedule(
-            repetitions=1, next_review="2026-01-02", **common
-        )  # same stale read
+        update_card_schedule(repetitions=1, next_review="2026-01-02", **common)  # same stale read
 
 
 def test_generation_quota_counts_and_stops_at_limit(dynamodb_tables):

@@ -47,6 +47,16 @@ def test_starts_generation_and_returns_202(dynamodb_tables, lambda_client, make_
     }
 
 
+def test_worker_payload_is_compact_utf8(dynamodb_tables, lambda_client, make_event):
+    # 50k CJK characters would be ~300 KB with \uXXXX escapes; raw UTF-8 is 150 KB.
+    notes = "細胞分裂" * 12_500
+    handler(make_event(body={"deck_name": "Bio", "notes_text": notes}, method="POST"), None)
+
+    payload = lambda_client.invoke.call_args.kwargs["Payload"]
+    assert len(payload) < 256 * 1024
+    assert json.loads(payload)["notes_text"] == notes
+
+
 def test_user_comes_from_token_not_body(dynamodb_tables, lambda_client, make_event):
     handler(
         make_event(user_id="real-user", body=_valid(user_id="attacker"), method="POST"),
@@ -84,22 +94,15 @@ def test_invalid_input_returns_400(dynamodb_tables, lambda_client, make_event, b
 
 
 @pytest.mark.parametrize("raw", ["{broken", "[1,2]"])
-def test_malformed_body_is_a_400_not_a_model_error(
-    dynamodb_tables, lambda_client, make_event, raw
-):
+def test_malformed_body_is_a_400_not_a_model_error(dynamodb_tables, lambda_client, make_event, raw):
     res = handler(make_event(raw_body=raw, method="POST"), None)
     assert res["statusCode"] == 400
     assert "Claude" not in res["body"]
 
 
-def test_daily_quota_returns_429(
-    dynamodb_tables, lambda_client, make_event, monkeypatch
-):
+def test_daily_quota_returns_429(dynamodb_tables, lambda_client, make_event, monkeypatch):
     monkeypatch.setenv("DAILY_GENERATION_LIMIT", "2")
-    codes = [
-        handler(make_event(body=_valid(), method="POST"), None)["statusCode"]
-        for _ in range(3)
-    ]
+    codes = [handler(make_event(body=_valid(), method="POST"), None)["statusCode"] for _ in range(3)]
     assert codes == [202, 202, 429]
     assert len(list_decks_for_user("user-1")) == 2
 
@@ -111,9 +114,7 @@ def test_quota_is_per_user(dynamodb_tables, lambda_client, make_event, monkeypat
     assert res["statusCode"] == 202
 
 
-def test_worker_start_failure_cleans_up_the_deck(
-    dynamodb_tables, lambda_client, make_event
-):
+def test_worker_start_failure_cleans_up_the_deck(dynamodb_tables, lambda_client, make_event):
     lambda_client.invoke.side_effect = RuntimeError("throttled")
     res = handler(make_event(body=_valid(), method="POST"), None)
 

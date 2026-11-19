@@ -18,6 +18,8 @@ from datetime import UTC, date, datetime, timedelta
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+MAX_DECK_NAME_CHARS = 100  # keep in sync with frontend/src/lib/limits.js
+
 # Card field limits, shared by AI generation and manual editing.
 MAX_FRONT_CHARS = 500
 MAX_BACK_CHARS = 1500
@@ -60,9 +62,7 @@ def get_user_id(event: dict) -> str:
     The authenticated user's id (Cognito `sub`), as set by the API Gateway
     authorizer. We never trust a user id sent by the client.
     """
-    claims = ((event.get("requestContext") or {}).get("authorizer") or {}).get(
-        "claims"
-    ) or {}
+    claims = ((event.get("requestContext") or {}).get("authorizer") or {}).get("claims") or {}
     sub = claims.get("sub")
     if not sub:
         raise ApiError(401, "Not authenticated")

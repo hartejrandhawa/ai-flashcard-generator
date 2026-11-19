@@ -20,14 +20,22 @@ import os
 
 import boto3
 
-from common import ApiError, api_handler, get_user_id, parse_body, response, utc_today
+from common import (
+    MAX_DECK_NAME_CHARS,
+    ApiError,
+    api_handler,
+    get_user_id,
+    parse_body,
+    response,
+    utc_today,
+)
 from db import STATUS_GENERATING, consume_generation_quota, create_deck, delete_deck
 
 logger = logging.getLogger(__name__)
 
-MAX_DECK_NAME_CHARS = 100
-# Async Lambda invocation payloads are capped at 256 KB. 50k characters is
-# at most ~200 KB even if every character is 4 bytes, so it always fits.
+# Keep in sync with frontend/src/lib/limits.js. The worker payload is sent as
+# raw UTF-8 (ensure_ascii=False below), at most 4 bytes per character, so 50k
+# characters stays under 200 KB, inside the async-invoke payload limit.
 MAX_NOTES_CHARS = 50_000
 
 
@@ -46,9 +54,7 @@ def handler(event, context):
     if not isinstance(deck_name, str) or not deck_name.strip():
         raise ApiError(400, "deck_name is required")
     if len(deck_name.strip()) > MAX_DECK_NAME_CHARS:
-        raise ApiError(
-            400, f"deck_name must be at most {MAX_DECK_NAME_CHARS} characters"
-        )
+        raise ApiError(400, f"deck_name must be at most {MAX_DECK_NAME_CHARS} characters")
     if not isinstance(notes_text, str) or not notes_text.strip():
         raise ApiError(400, "notes_text is required")
     if len(notes_text) > MAX_NOTES_CHARS:
@@ -64,7 +70,9 @@ def handler(event, context):
         _lambda_client().invoke(
             FunctionName=os.environ["WORKER_FUNCTION_NAME"],
             InvocationType="Event",  # fire-and-forget
-            Payload=json.dumps({"deck_id": deck_id, "notes_text": notes_text}).encode(),
+            # ensure_ascii=False: the default escapes each non-ASCII character
+            # as \uXXXX (6 bytes, 12 for emoji), which can triple the payload.
+            Payload=json.dumps({"deck_id": deck_id, "notes_text": notes_text}, ensure_ascii=False).encode("utf-8"),
         )
     except Exception:
         # Don't leave a deck stuck on "generating" that nothing will ever finish.

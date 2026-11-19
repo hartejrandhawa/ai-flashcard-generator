@@ -47,9 +47,7 @@ class ConflictError(Exception):
 @functools.lru_cache(maxsize=1)
 def get_dynamodb_resource():
     # Cached: building a boto3 resource is slow and was done on every call before.
-    return boto3.resource(
-        "dynamodb", region_name=os.environ.get("AWS_REGION", "us-east-1")
-    )
+    return boto3.resource("dynamodb", region_name=os.environ.get("AWS_REGION", "us-east-1"))
 
 
 def _table(name: str):
@@ -118,9 +116,12 @@ def rename_deck(deck_id: str, deck_name: str) -> None:
     )
 
 
-def set_deck_status(
-    deck_id: str, status: str, card_count: int | None = None, error: str | None = None
-) -> None:
+def set_deck_status(deck_id: str, status: str, card_count: int | None = None, error: str | None = None) -> bool:
+    """
+    Update a deck's status. Returns False if the deck no longer exists (the
+    user deleted it). Without the condition, update_item would quietly create
+    a new, ownerless deck item.
+    """
     names = {"#s": "status"}
     values: dict = {":s": status}
     sets = ["#s = :s"]
@@ -131,19 +132,69 @@ def set_deck_status(
         sets.append("#e = :e")
         names["#e"] = "error"
         values[":e"] = error
-    _table(DECKS_TABLE).update_item(
-        Key={"deck_id": deck_id},
-        UpdateExpression="SET " + ", ".join(sets),
-        ExpressionAttributeNames=names,
-        ExpressionAttributeValues=values,
-    )
+    try:
+        _table(DECKS_TABLE).update_item(
+            Key={"deck_id": deck_id},
+            UpdateExpression="SET " + ", ".join(sets),
+            ConditionExpression="attribute_exists(deck_id)",
+            ExpressionAttributeNames=names,
+            ExpressionAttributeValues=values,
+        )
+        return True
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return False
+        raise
+
+
+def claim_generation(deck_id: str) -> bool:
+    """
+    Atomically mark a "generating" deck as being worked on. Only the first
+    caller gets True, so a duplicated async invoke can't run (and bill) the
+    model call twice. A read-then-check would let two copies both pass.
+    """
+    try:
+        _table(DECKS_TABLE).update_item(
+            Key={"deck_id": deck_id},
+            UpdateExpression="SET generation_started_at = :now",
+            ConditionExpression="#s = :generating AND attribute_not_exists(generation_started_at)",
+            ExpressionAttributeNames={"#s": "status"},
+            ExpressionAttributeValues={":now": _now(), ":generating": STATUS_GENERATING},
+        )
+        return True
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return False
+        raise
+
+
+# The worker's Lambda timeout is 200 s, so a deck still "generating" after this
+# long has a worker that died (timeout, crash) and will never finish.
+GENERATION_STALE_AFTER = timedelta(minutes=10)
+STALE_GENERATION_ERROR = "Generation took too long and was stopped. Please try again."
+
+
+def deck_status(deck: dict) -> tuple[str, str | None]:
+    """The (status, error) to show the user, treating abandoned generations as failed."""
+    status = deck.get("status", STATUS_READY)
+    if status == STATUS_GENERATING:
+        try:
+            started = datetime.fromisoformat(deck.get("created_at", ""))
+        except ValueError:
+            started = None
+        if started and datetime.now(UTC) - started > GENERATION_STALE_AFTER:
+            return STATUS_FAILED, STALE_GENERATION_ERROR
+    return status, deck.get("error")
+
+
+def delete_cards_for_deck(deck_id: str) -> None:
+    with _table(CARDS_TABLE).batch_writer() as batch:
+        for card in get_cards_for_deck(deck_id):
+            batch.delete_item(Key={"card_id": card["card_id"]})
 
 
 def delete_deck(deck_id: str) -> None:
-    cards_table = _table(CARDS_TABLE)
-    with cards_table.batch_writer() as batch:
-        for card in get_cards_for_deck(deck_id):
-            batch.delete_item(Key={"card_id": card["card_id"]})
+    delete_cards_for_deck(deck_id)
     _table(DECKS_TABLE).delete_item(Key={"deck_id": deck_id})
 
 
@@ -259,8 +310,7 @@ def update_card_schedule(
         _table(CARDS_TABLE).update_item(
             Key={"card_id": card_id},
             UpdateExpression=(
-                "SET repetitions = :r, interval_days = :i, easiness_factor = :e, "
-                "last_reviewed = :l, next_review = :n"
+                "SET repetitions = :r, interval_days = :i, easiness_factor = :e, last_reviewed = :l, next_review = :n"
             ),
             ExpressionAttributeValues={
                 ":r": repetitions,

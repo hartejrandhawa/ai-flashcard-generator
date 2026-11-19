@@ -6,7 +6,7 @@ the home screen needs and the generation status the frontend polls.
 """
 
 from common import api_handler, get_user_id, parse_today, query_param, response
-from db import STATUS_READY, get_cards_for_deck, list_decks_for_user
+from db import STATUS_READY, deck_status, get_cards_for_deck, list_decks_for_user
 from sm2 import is_due, state_from_item
 
 
@@ -21,7 +21,7 @@ def handler(event, context):
         key=lambda d: d.get("created_at", ""),
         reverse=True,
     ):
-        status = deck.get("status", STATUS_READY)
+        status, error = deck_status(deck)
         card_count = due_count = 0
         if status == STATUS_READY:
             cards = get_cards_for_deck(deck["deck_id"])
@@ -33,7 +33,7 @@ def handler(event, context):
                 "deck_name": deck["deck_name"],
                 "created_at": deck.get("created_at"),
                 "status": status,
-                "error": deck.get("error"),
+                "error": error,
                 "card_count": card_count,
                 "due_count": due_count,
             }
