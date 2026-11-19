@@ -8,3 +8,5 @@ __pycache__/
 .pytest_cache/
 .venv/
 .ruff_cache/
+samconfig.toml
+backend/.aws-sam/

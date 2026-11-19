@@ -1,0 +1,17 @@
+# Copy to samconfig.toml (git-ignored) and fill in your values, then run:
+#   sam build && sam deploy
+version = 0.1
+
+[default.global.parameters]
+stack_name = "flashcard-generator"
+
+[default.deploy.parameters]
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+resolve_s3 = true
+parameter_overrides = [
+  "CognitoDomainPrefix=your-unique-prefix",
+  "AllowedOrigin=http://localhost:5173",
+  "FrontendUrls=http://localhost:5173/",
+]

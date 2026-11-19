@@ -2,6 +2,40 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: AI Flashcard Generator - serverless backend
 
+Parameters:
+  AnthropicApiKeyParameterName:
+    Type: String
+    Default: flashcards/anthropic-api-key
+    Description: >
+      Name (no leading slash) of an SSM SecureString parameter holding your Anthropic API key.
+      Create it once, outside CloudFormation (it cannot create SecureStrings):
+      aws ssm put-parameter --name /flashcards/anthropic-api-key --type SecureString --value sk-ant-...
+
+  AllowedOrigin:
+    Type: String
+    Default: '*'
+    Description: Origin allowed by CORS. Use the real frontend origin in production, e.g. https://app.example.com
+
+  FrontendUrls:
+    Type: CommaDelimitedList
+    Default: http://localhost:5173/
+    Description: Allowed sign-in / sign-out redirect URLs for the frontend (comma separated, trailing slash included)
+
+  CognitoDomainPrefix:
+    Type: String
+    Description: Globally unique prefix for the hosted sign-in page (https://<prefix>.auth.<region>.amazoncognito.com)
+
+  DailyGenerationLimit:
+    Type: Number
+    Default: 20
+    Description: Maximum number of decks one user can generate per day (each one is a paid model call)
+
+  TableDeletionProtection:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Set to 'false' before deleting the stack, otherwise the tables cannot be deleted
+
 Globals:
   Function:
     Runtime: python3.12
@@ -11,24 +45,21 @@ Globals:
       Variables:
         DECKS_TABLE: !Ref DecksTable
         CARDS_TABLE: !Ref CardsTable
-        ANTHROPIC_API_KEY: !Ref AnthropicApiKey
-  Api:
-    Cors:
-      AllowOrigin: "'*'"
-      AllowHeaders: "'Content-Type'"
-      AllowMethods: "'GET,POST,OPTIONS'"
-
-Parameters:
-  AnthropicApiKey:
-    Type: String
-    NoEcho: true
-    Description: Your Anthropic API key (get one at console.anthropic.com)
+        ALLOWED_ORIGIN: !Ref AllowedOrigin
 
 Resources:
+  # ---------------------------------------------------------------- data
   DecksTable:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !Ref TableDeletionProtection
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      # Per-user daily quota counters live in this table and expire on their own.
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
       AttributeDefinitions:
         - AttributeName: deck_id
           AttributeType: S
@@ -49,6 +80,9 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !Ref TableDeletionProtection
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
       AttributeDefinitions:
         - AttributeName: card_id
           AttributeType: S
@@ -65,25 +99,146 @@ Resources:
           Projection:
             ProjectionType: ALL
 
-  NotesBucket:
-    Type: AWS::S3::Bucket
+  # ---------------------------------------------------------------- auth
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${AWS::StackName}-users
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 10
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
 
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomainPrefix
+      UserPoolId: !Ref UserPool
+
+  # Public client: a browser app cannot keep a secret, so it uses the
+  # authorization-code flow with PKCE against the hosted sign-in page.
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - openid
+        - email
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs: !Ref FrontendUrls
+      LogoutURLs: !Ref FrontendUrls
+      ExplicitAuthFlows:
+        - ALLOW_REFRESH_TOKEN_AUTH
+      PreventUserExistenceErrors: ENABLED
+      IdTokenValidity: 60
+      AccessTokenValidity: 60
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        IdToken: minutes
+        AccessToken: minutes
+        RefreshToken: days
+
+  # ---------------------------------------------------------------- api
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowOrigin: !Sub "'${AllowedOrigin}'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowMethods: "'GET,POST,PATCH,DELETE,OPTIONS'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt UserPool.Arn
+      # Errors raised by API Gateway itself (401, 403, 429, 504...) never reach
+      # our code, so without these the browser blocks them as CORS failures.
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'${AllowedOrigin}'"
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'${AllowedOrigin}'"
+      # Stage-wide ceiling that protects the account and the Anthropic bill
+      # from floods. The per-user daily quota is enforced in the handler.
+      MethodSettings:
+        - ResourcePath: /*
+          HttpMethod: '*'
+          ThrottlingRateLimit: 20
+          ThrottlingBurstLimit: 40
+        - ResourcePath: /decks
+          HttpMethod: POST
+          ThrottlingRateLimit: 1
+          ThrottlingBurstLimit: 3
+
+  # ---------------------------------------------------------------- functions
+  # POST /decks only validates and queues work; the worker does the slow LLM call.
   GenerateFlashcardsFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: lambda_functions/
       Handler: generate_flashcards.handler
+      Environment:
+        Variables:
+          WORKER_FUNCTION_NAME: !Ref GenerateWorkerFunction
+          DAILY_GENERATION_LIMIT: !Ref DailyGenerationLimit
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DecksTable
         - DynamoDBCrudPolicy:
             TableName: !Ref CardsTable
+        - LambdaInvokePolicy:
+            FunctionName: !Ref GenerateWorkerFunction
       Events:
         Api:
           Type: Api
           Properties:
+            RestApiId: !Ref Api
             Path: /decks
             Method: post
+
+  # The only function that can read the Anthropic key or call the model.
+  GenerateWorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/
+      Handler: generate_worker.handler
+      Timeout: 200  # model call may take up to 90s, and the SDK retries once
+      Environment:
+        Variables:
+          ANTHROPIC_API_KEY_PARAM: !Sub /${AnthropicApiKeyParameterName}
+      # A retry would run (and bill) the model call again; the worker records
+      # failures on the deck itself instead.
+      EventInvokeConfig:
+        MaximumRetryAttempts: 0
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DecksTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CardsTable
+        - SSMParameterReadPolicy:
+            ParameterName: !Ref AnthropicApiKeyParameterName
 
   ListDecksFunction:
     Type: AWS::Serverless::Function
@@ -93,11 +248,56 @@ Resources:
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref DecksTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref CardsTable
       Events:
         Api:
           Type: Api
           Properties:
+            RestApiId: !Ref Api
             Path: /decks
+            Method: get
+
+  ManageDeckFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/
+      Handler: manage_deck.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DecksTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CardsTable
+      Events:
+        Rename:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /decks/{deck_id}
+            Method: patch
+        Delete:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /decks/{deck_id}
+            Method: delete
+
+  GetDeckCardsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/
+      Handler: get_deck_cards.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DecksTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref CardsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /decks/{deck_id}/cards
             Method: get
 
   GetDueCardsFunction:
@@ -107,13 +307,40 @@ Resources:
       Handler: get_due_cards.handler
       Policies:
         - DynamoDBReadPolicy:
+            TableName: !Ref DecksTable
+        - DynamoDBReadPolicy:
             TableName: !Ref CardsTable
       Events:
         Api:
           Type: Api
           Properties:
+            RestApiId: !Ref Api
             Path: /decks/{deck_id}/due
             Method: get
+
+  ManageCardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/
+      Handler: manage_card.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DecksTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CardsTable
+      Events:
+        Edit:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /cards/{card_id}
+            Method: patch
+        Delete:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /cards/{card_id}
+            Method: delete
 
   SubmitReviewFunction:
     Type: AWS::Serverless::Function
@@ -121,18 +348,27 @@ Resources:
       CodeUri: lambda_functions/
       Handler: submit_review.handler
       Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DecksTable
         - DynamoDBCrudPolicy:
             TableName: !Ref CardsTable
       Events:
         Api:
           Type: Api
           Properties:
+            RestApiId: !Ref Api
             Path: /reviews
             Method: post
 
 Outputs:
   ApiUrl:
-    Description: API Gateway endpoint URL
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
-  NotesBucketName:
-    Value: !Ref NotesBucket
+    Description: API Gateway endpoint URL (use as VITE_API_BASE, without the trailing slash)
+    Value: !Sub "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Description: Use as VITE_COGNITO_CLIENT_ID
+    Value: !Ref UserPoolClient
+  CognitoDomain:
+    Description: Use as VITE_COGNITO_DOMAIN
+    Value: !Sub "https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
